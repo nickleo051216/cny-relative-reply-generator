@@ -64,11 +64,28 @@ const getMatchedLuckyPhrase = (questionCategory) => {
 
 // 全網募資進度
 const CURRENT_DONATION = 0; // 手動更新此數字 (單位: 杯咖啡)
-const GOAL_DONATION = 50;
-const ENABLE_GLOBAL_AI = CURRENT_DONATION >= GOAL_DONATION;
+
+const DONATION_TIERS = [
+  { threshold: 0, limit: 3, name: "體驗版" },
+  { threshold: 10, limit: 5, name: "集氣 Level 1" },
+  { threshold: 30, limit: 10, name: "集氣 Level 2" },
+  { threshold: 50, limit: Infinity, name: "全網解鎖" },
+];
+
+const getCurrentTier = () => {
+  for (let i = DONATION_TIERS.length - 1; i >= 0; i--) {
+    if (CURRENT_DONATION >= DONATION_TIERS[i].threshold) {
+      return DONATION_TIERS[i];
+    }
+  }
+  return DONATION_TIERS[0];
+};
+
+const getNextTier = () => {
+  return DONATION_TIERS.find(t => t.threshold > CURRENT_DONATION) || null;
+};
 
 // AI 使用次數管理
-const AI_DAILY_LIMIT = 5;
 const STORAGE_KEY = 'cny_ai_usage';
 const UNLOCK_KEY = 'cny_ai_unlocked';
 
@@ -150,13 +167,18 @@ export default function CNYGame() {
   useEffect(() => {
     setAiUsage(getAIUsage());
     setIsUnlocked(isAIUnlocked());
-    if (ENABLE_GLOBAL_AI) {
-      setUseAI(true);
-    }
+    // 預設開啟 AI，但會受到次數限制
+    setUseAI(true);
   }, []);
 
-  const canUseAI = () => isUnlocked || aiUsage.count < AI_DAILY_LIMIT;
-  const getRemainingAICount = () => Math.max(0, AI_DAILY_LIMIT - aiUsage.count);
+  const currentTier = getCurrentTier();
+  const dailyLimit = currentTier.limit;
+
+  const canUseAI = () => isUnlocked || dailyLimit === Infinity || aiUsage.count < dailyLimit;
+  const getRemainingAICount = () => {
+    if (isUnlocked || dailyLimit === Infinity) return 999;
+    return Math.max(0, dailyLimit - aiUsage.count);
+  };
 
   const handleDonate = () => {
     // TODO: 串接實際金流（綠界 / LINE Pay）
@@ -173,8 +195,8 @@ export default function CNYGame() {
 
     const question = selectedQuestion?.question || customQuestion;
     const questionCategory = selectedQuestion?.category || "人生";
-    // 只有在全網募資達標或使用者有權限時才允許使用 AI
-    const shouldUseAI = (ENABLE_GLOBAL_AI || (useAI && canUseAI()));
+    // 只要有額度或是已解鎖就可以使用 AI
+    const shouldUseAI = useAI;
 
     // 預設回覆邏輯更新：從陣列中隨機選一個
     const presetReplies = PRESET_REPLIES[question]?.[selectedStyle.id];
@@ -184,7 +206,21 @@ export default function CNYGame() {
 
     let finalReply = null;
 
-    if (shouldUseAI && ENABLE_GLOBAL_AI) { // 目前暫時只在全網解鎖時使用 AI (或依據需求調整)
+    // 檢查是否有 AI 額度
+    if (shouldUseAI && !canUseAI()) {
+      // 額度不足，強制關閉 AI 並顯示提示 (或是直接跳轉到預設回覆，這裡選擇使用預設回覆並提示)
+      // 這裡簡單處理：如果想用 AI 但沒額度，就 fallback 到預設，並且在 UI 上可能已經有提示了
+      // 或者再彈出一次 Modal
+      if (!showDonateModal) setShowDonateModal(true);
+      // 繼續執行會跑到下方的 else 區塊使用預設回覆
+    } else if (shouldUseAI) {
+      // 有額度，使用 AI 生成生成
+      // 若尚未全網解鎖且未個人解鎖，則扣除額度
+      if (!isUnlocked && currentTier.limit !== Infinity) {
+        incrementAIUsage();
+        setAiUsage(getAIUsage());
+      }
+
       finalReply = await generateAIReply(question, selectedStyle.id);
       if (!finalReply) {
         const fallbackReplies = {
@@ -228,11 +264,16 @@ export default function CNYGame() {
     setSelectedStyle(null);
     setGeneratedReply('');
     setLuckyPhrase('');
-    setUseAI(false);
+    setUseAI(true); // 預設開啟 AI
     setCurrentView('home');
   };
 
   const reroll = async () => {
+    if (useAI && !canUseAI()) {
+      setShowDonateModal(true);
+      return;
+    }
+
     setCurrentView('generating');
     setIsLoading(true);
     const question = selectedQuestion?.question || customQuestion;
@@ -240,13 +281,24 @@ export default function CNYGame() {
 
     let newReply = null;
 
-    if (ENABLE_GLOBAL_AI) {
+    // Reroll 也檢查額度
+    if (useAI && canUseAI()) {
+      if (!isUnlocked && currentTier.limit !== Infinity) {
+        incrementAIUsage();
+        setAiUsage(getAIUsage());
+      }
+
       newReply = await generateAIReply(question, selectedStyle.id, generatedReply);
       if (!newReply) {
         const fallback = ["關你屁事", "你很閒齁"];
         newReply = fallback[Math.floor(Math.random() * fallback.length)];
       }
     } else {
+      // 額度不足或不使用 AI
+      if (useAI && !canUseAI()) {
+        setShowDonateModal(true);
+      }
+
       await new Promise(resolve => setTimeout(resolve, 600));
       const presetReplies = PRESET_REPLIES[question]?.[selectedStyle.id];
 
@@ -414,21 +466,25 @@ export default function CNYGame() {
 
         <div className="bg-red-950/50 rounded-xl p-4 mb-6">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-red-300">免費額度</span>
-            <span className="text-yellow-400 font-bold">{getRemainingAICount()} / {AI_DAILY_LIMIT} 次/天</span>
+            <span className="text-red-300">今日免費額度</span>
+            <span className="text-yellow-400 font-bold">
+              {dailyLimit === Infinity ? '無限制' : `${getRemainingAICount()} / ${dailyLimit} 次`}
+            </span>
           </div>
-          <div className="w-full bg-red-800 rounded-full h-2">
-            <div
-              className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-2 rounded-full transition-all"
-              style={{ width: `${(getRemainingAICount() / AI_DAILY_LIMIT) * 100}%` }}
-            />
-          </div>
+          {dailyLimit !== Infinity && (
+            <div className="w-full bg-red-800 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-2 rounded-full transition-all"
+                style={{ width: `${(getRemainingAICount() / dailyLimit) * 100}%` }}
+              />
+            </div>
+          )}
         </div>
 
         <div className="space-y-3 mb-6">
           <div className="flex items-center gap-3 text-red-100">
             <span className="text-green-400">✓</span>
-            <span>無限次 AI 生成回覆</span>
+            <span>當前等級：{currentTier.name} ({dailyLimit === Infinity ? '無限' : dailyLimit}次/天)</span>
           </div>
           <div className="flex items-center gap-3 text-red-100">
             <span className="text-green-400">✓</span>
@@ -523,7 +579,7 @@ export default function CNYGame() {
           </div>
 
           <div className="mb-6 p-4 bg-red-950/50 rounded-xl border border-red-700/50">
-            {ENABLE_GLOBAL_AI ? (
+            {currentTier.limit === Infinity ? (
               <div className="text-center">
                 <p className="text-green-400 font-bold mb-2">🎉 全網集氣成功！AI 功能已解鎖！</p>
                 <p className="text-red-200 text-sm">現在您可以無限使用 AI 生成神回覆！</p>
@@ -532,27 +588,34 @@ export default function CNYGame() {
               <>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-yellow-400 font-bold flex items-center gap-2">
-                    <span>☕</span> 全網募資解鎖 AI
+                    <span>☕</span> {currentTier.name}
                   </p>
-                  <span className="text-red-200 text-sm">{CURRENT_DONATION} / {GOAL_DONATION} 杯</span>
+                  <span className="text-red-200 text-sm">{CURRENT_DONATION} / {getNextTier()?.threshold || 'Max'} 杯</span>
                 </div>
-                <div className="w-full bg-red-900 rounded-full h-3 mb-3 relative overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-full rounded-full transition-all duration-1000 relative"
-                    style={{ width: `${Math.min((CURRENT_DONATION / GOAL_DONATION) * 100, 100)}%` }}
-                  >
-                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+
+                {getNextTier() && (
+                  <div className="w-full bg-red-900 rounded-full h-3 mb-3 relative overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-full rounded-full transition-all duration-1000 relative"
+                      style={{
+                        width: `${Math.max(5, Math.min(((CURRENT_DONATION - currentTier.threshold) / (getNextTier().threshold - currentTier.threshold)) * 100, 100))}%`
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                    </div>
                   </div>
-                </div>
+                )}
+
                 <p className="text-red-300 text-xs text-center mb-3">
-                  AI 伺服器成本高昂，目前功能暫時封印。<br />
-                  請我們喝杯咖啡，加速解鎖全網 AI 功能！
+                  {getNextTier()
+                    ? `再募資 ${getNextTier().threshold - CURRENT_DONATION} 杯咖啡，解鎖「${getNextTier().name}」！\n(每日可用次數提升至 ${getNextTier().limit} 次)`
+                    : '已達成最高目標！'}
                 </p>
                 <button
                   onClick={() => window.open('https://portaly.cc/zn.studio/support', '_blank')}
                   className="w-full py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 rounded-lg hover:bg-yellow-500/30 transition-colors text-sm font-bold flex items-center justify-center gap-2"
                 >
-                  <span>🧧</span> 贊助 一杯咖啡 加速解鎖
+                  <span>🧧</span> 贊助 $30 幫大家升級
                 </button>
               </>
             )}
@@ -633,18 +696,30 @@ export default function CNYGame() {
               <div>
                 <p className="text-red-100 font-bold">使用 AI 生成</p>
                 <p className="text-red-400 text-xs">
-                  {ENABLE_GLOBAL_AI ? '已全網解鎖' : '需全網集氣解鎖'}
+                  {isUnlocked || dailyLimit === Infinity
+                    ? '無限暢用'
+                    : `今日剩餘 ${getRemainingAICount()} / ${dailyLimit} 次`
+                  }
                 </p>
               </div>
             </div>
             <button
-              disabled={!ENABLE_GLOBAL_AI}
-              className={`w-14 h-8 rounded-full transition-all duration-300 ${ENABLE_GLOBAL_AI && useAI ? 'bg-green-500' : 'bg-gray-600'}`}
+              onClick={() => {
+                // 如果額度用完且未解鎖，點擊時彈出 Donate Modal
+                if (!canUseAI()) {
+                  setShowDonateModal(true);
+                } else {
+                  setUseAI(!useAI);
+                }
+              }}
+              className={`w-14 h-8 rounded-full transition-all duration-300 ${useAI ? (canUseAI() ? 'bg-green-500' : 'bg-red-800 opacity-50') : 'bg-red-700'
+                }`}
             >
-              <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-all duration-300 ${ENABLE_GLOBAL_AI && useAI ? 'translate-x-7' : 'translate-x-1'}`} />
+              <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-all duration-300 ${useAI ? 'translate-x-7' : 'translate-x-1'
+                }`} />
             </button>
           </div>
-          {useAI && !isUnlocked && (
+          {useAI && !isUnlocked && dailyLimit !== Infinity && (
             <p className="text-yellow-400/80 text-xs mt-2 flex items-center gap-1">
               <span>💡</span>
               <span>使用後會消耗 1 次額度</span>
@@ -747,9 +822,9 @@ export default function CNYGame() {
           </button>
         </div>
 
-        {!isUnlocked && useAI && (
+        {useAI && dailyLimit !== Infinity && !isUnlocked && (
           <p className="text-center text-yellow-400/60 text-xs mt-3">
-            🤖 AI 剩餘 {getRemainingAICount()} 次 · <button onClick={() => setShowDonateModal(true)} className="underline">解鎖無限</button>
+            🤖 {currentTier.name}：AI 剩餘 {getRemainingAICount()} 次 · <button onClick={() => setShowDonateModal(true)} className="underline">個人解鎖無限</button>
           </p>
         )}
 
