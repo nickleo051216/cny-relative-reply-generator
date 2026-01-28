@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import { RELATIVE_QUESTIONS, PRESET_REPLIES, LUCKY_PHRASES } from './data/replies';
 
 // 創作者資訊
 const CREATOR_INFO = {
@@ -14,23 +16,7 @@ const CREATOR_INFO = {
 };
 
 // 預設親戚問題
-const RELATIVE_QUESTIONS = [
-  { id: 1, question: "什麼時候結婚啊？", icon: "💍", category: "感情" },
-  { id: 2, question: "有對象了沒？", icon: "❤️", category: "感情" },
-  { id: 3, question: "年薪多少啊？", icon: "💰", category: "工作" },
-  { id: 4, question: "什麼時候生小孩？", icon: "👶", category: "家庭" },
-  { id: 5, question: "怎麼還不買房？", icon: "🏠", category: "財務" },
-  { id: 6, question: "隔壁小孩都當主管了...", icon: "📈", category: "比較" },
-  { id: 7, question: "怎麼又胖了？", icon: "⚖️", category: "外貌" },
-  { id: 8, question: "讀這個科系能幹嘛？", icon: "📚", category: "學業" },
-  { id: 9, question: "一個月存多少錢？", icon: "🏦", category: "財務" },
-  { id: 10, question: "打算什麼時候換工作？", icon: "💼", category: "工作" },
-  { id: 11, question: "怎麼還在租房子？", icon: "🔑", category: "財務" },
-  { id: 12, question: "二胎什麼時候生？", icon: "👨‍👩‍👧‍👦", category: "家庭" },
-  { id: 13, question: "你這樣下去怎麼辦？", icon: "😰", category: "人生" },
-  { id: 14, question: "怎麼穿這樣就來了？", icon: "👔", category: "外貌" },
-  { id: 15, question: "交的男/女朋友條件好嗎？", icon: "🔍", category: "感情" },
-];
+
 
 // 回嘴風格
 const REPLY_STYLES = [
@@ -41,172 +27,10 @@ const REPLY_STYLES = [
 ];
 
 // 預設回覆
-const PRESET_REPLIES = {
-  "什麼時候結婚啊？": {
-    savage: "等你離婚我再結，這樣比較有經驗可以請教",
-    sharp: "您這麼關心，要不要順便贊助婚禮費用？",
-    funny: "我在等一個敢問我年薪的人，這樣門當戶對",
-    gentle: "我想等您的小孩結完再說，不然搶了風頭多不好意思"
-  },
-  "有對象了沒？": {
-    savage: "有啊，但條件太好了，怕帶回來你們會自卑",
-    sharp: "有，而且比您當年嫁的好多了",
-    funny: "有！我跟錢在交往，但它總是離開我",
-    gentle: "還在挑，畢竟不想跟阿姨當年一樣將就嘛～"
-  },
-  "年薪多少啊？": {
-    savage: "比你家小孩多，但我怕說出來傷感情",
-    sharp: "這麼八卦，是國稅局派來的嗎？",
-    funny: "說了你也不會給我加薪啊",
-    gentle: "不太好意思說，怕讓您覺得您當年選錯行業"
-  },
-  "什麼時候生小孩？": {
-    savage: "等你願意幫忙帶+出錢養，我馬上生",
-    sharp: "您孫子都還沒著落，管到別人家來了？",
-    funny: "我家貓都還沒生，輪不到我",
-    gentle: "等我養得起婆婆媽媽們的期待再說～"
-  },
-  "怎麼還不買房？": {
-    savage: "你要送嗎？說啊",
-    sharp: "房價這麼高，不然您先幫出頭期款？",
-    funny: "因為我想住帝寶，還在存第一坪的錢",
-    gentle: "等您家那間傳給我的時候囉～開玩笑的啦"
-  },
-  "隔壁小孩都當主管了...": {
-    savage: "那你怎麼不去當他媽？",
-    sharp: "喔是喔，那他包給您多少紅包？",
-    funny: "可是他沒有我這麼會吃年夜飯",
-    gentle: "對呀，聽說工時很長呢，我比較惜命"
-  },
-  "怎麼又胖了？": {
-    savage: "你臉皮比我肥肉還厚，怎麼不先擔心一下？",
-    sharp: "至少我胖得起，有些人想胖還沒錢吃",
-    funny: "因為我把你的份也吃了，不客氣",
-    gentle: "都是您廚藝太好的錯，我控制不住"
-  },
-  "讀這個科系能幹嘛？": {
-    savage: "至少能聽懂你在講什麼廢話",
-    sharp: "能幹嘛？能不用靠關係找工作",
-    funny: "能坐在這裡聽你問這種問題",
-    gentle: "您當年讀什麼來著？好像也沒多厲害齁"
-  },
-  "一個月存多少錢？": {
-    savage: "比你家那位廢物多，滿意嗎？",
-    sharp: "您是要借錢嗎？不借喔",
-    funny: "存很多啊，都存在別人的銀行帳戶裡",
-    gentle: "應該比您女兒/兒子多一點點啦，但我不好意思說"
-  },
-  "打算什麼時候換工作？": {
-    savage: "打算什麼時候換個問題？",
-    sharp: "您有更好的要介紹嗎？沒有的話就安靜",
-    funny: "等我中樂透就換成不工作",
-    gentle: "等您家公司開出好條件挖我的時候"
-  },
-  "怎麼還在租房子？": {
-    savage: "因為還沒有人死掉留房子給我啊",
-    sharp: "您要送嗎？送我就不租了",
-    funny: "因為房東比房貸便宜，我數學還可以",
-    gentle: "對啊，不像您當年有長輩幫忙買，我只能靠自己"
-  },
-  "二胎什麼時候生？": {
-    savage: "你家多的房間借我住+幫忙帶就生",
-    sharp: "一胎都養不起了，您要贊助嗎？",
-    funny: "等老大會自己換尿布再說",
-    gentle: "等我忘記生第一胎有多痛再考慮"
-  },
-  "你這樣下去怎麼辦？": {
-    savage: "關你屁事",
-    sharp: "怎麼辦？就繼續過得比你家小孩好啊",
-    funny: "就這樣下去啊，不然要上去嗎？",
-    gentle: "謝謝關心，但我活得比你想像的好很多"
-  },
-  "怎麼穿這樣就來了？": {
-    savage: "來你家又不是走紅毯，穿什麼都浪費",
-    sharp: "因為好看的衣服留著重要場合穿",
-    funny: "因為我怕穿太好被親戚借錢",
-    gentle: "喔對欸，早知道應該穿正式一點，像去靈堂那樣"
-  },
-  "交的男/女朋友條件好嗎？": {
-    savage: "比你當年嫁的好一萬倍",
-    sharp: "好不好我自己知道就好，不用經過您審核",
-    funny: "對象是人就好，條件是活的就行",
-    gentle: "還可以，至少不會到處問別人八卦"
-  },
-};
+
 
 // 超豐富吉祥話庫
-const LUCKY_PHRASES = {
-  classic: [
-    "恭喜發財，紅包拿來！🧧",
-    "新年快樂，萬事如意！✨",
-    "龍馬精神，步步高升！🐉",
-    "心想事成，美夢成真！💫",
-    "財源廣進，金玉滿堂！💰",
-    "吉祥如意，福星高照！⭐",
-    "年年有餘，歲歲平安！🐟",
-    "闔家歡樂，幸福美滿！👨‍👩‍👧‍👦",
-  ],
-  money: [
-    "數錢數到手抽筋！💵",
-    "鈔票多到沒地方放！🤑",
-    "存款突破七位數！📈",
-    "年終獎金翻三倍！🎰",
-    "買房不用看價錢！🏠",
-    "錢包永遠塞不下！👛",
-    "投資全部都賺錢！📊",
-    "老闆主動幫你加薪！💼",
-    "中樂透頭獎！🎫",
-    "財富自由達成！🏆",
-  ],
-  funny: [
-    "新的一年，親戚少一點！😇",
-    "過年體重不要增加！⚖️",
-    "親戚的嘴閉緊一點！🤐",
-    "今年不用回答蠢問題！🙉",
-    "紅包收到手軟！🧧",
-    "年假多放幾天！🏖️",
-    "塞車的不是我！🚗",
-    "搶到高鐵票！🚄",
-    "麻將場場自摸！🀄",
-    "刮刮樂每張都中！🎰",
-    "吃再多都不會胖！🍖",
-    "今年不被催婚！💒",
-    "薪水跟體重一樣會漲！📈",
-  ],
-  career: [
-    "升官發財，前途無量！👔",
-    "事業有成，名利雙收！🏅",
-    "貴人相助，小人退散！🛡️",
-    "跳槽加薪，offer拿到手軟！📄",
-    "老闆看你越來越順眼！👁️",
-    "會議都準時結束！⏰",
-    "專案一次過！✅",
-    "不用加班！🎉",
-  ],
-  love: [
-    "脫單成功！💕",
-    "遇到對的人！💑",
-    "感情順利，甜甜蜜蜜！🍯",
-    "桃花朵朵開！🌸",
-    "前任過得沒你好！😌",
-    "曖昧對象主動告白！💌",
-  ],
-  health: [
-    "身體健康，百病不侵！💪",
-    "吃嘛嘛香，睡嘛嘛好！😴",
-    "體檢報告全綠燈！🟢",
-    "熬夜也不會爆肝！🌙",
-    "腰不酸、腿不痛！🦵",
-  ],
-  horse2026: [
-    "馬到成功，好運連連！🐎",
-    "金馬獻瑞，吉祥如意！🐎✨",
-    "龍馬精神，福氣滿滿！🐎🧧",
-    "馬年大吉，心想事成！🐎💫",
-    "馬躍新春，萬事亨通！🐎🎊",
-    "天馬送福，財運亨通！🐎💰"
-  ],
-};
+
 
 const getRandomLuckyPhrase = () => {
   const allCategories = Object.values(LUCKY_PHRASES);
@@ -237,6 +61,11 @@ const getMatchedLuckyPhrase = (questionCategory) => {
   }
   return getRandomLuckyPhrase();
 };
+
+// 全網募資進度
+const CURRENT_DONATION = 0; // 手動更新此數字 (單位: 杯咖啡)
+const GOAL_DONATION = 50;
+const ENABLE_GLOBAL_AI = CURRENT_DONATION >= GOAL_DONATION;
 
 // AI 使用次數管理
 const AI_DAILY_LIMIT = 5;
@@ -316,10 +145,14 @@ export default function CNYGame() {
   const [showDonateModal, setShowDonateModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [useAI, setUseAI] = useState(false);
+  const resultCardRef = useRef(null);
 
   useEffect(() => {
     setAiUsage(getAIUsage());
     setIsUnlocked(isAIUnlocked());
+    if (ENABLE_GLOBAL_AI) {
+      setUseAI(true);
+    }
   }, []);
 
   const canUseAI = () => isUnlocked || aiUsage.count < AI_DAILY_LIMIT;
@@ -340,22 +173,19 @@ export default function CNYGame() {
 
     const question = selectedQuestion?.question || customQuestion;
     const questionCategory = selectedQuestion?.category || "人生";
-    const shouldUseAI = useAI && canUseAI();
-    const presetReply = PRESET_REPLIES[question]?.[selectedStyle.id];
+    // 只有在全網募資達標或使用者有權限時才允許使用 AI
+    const shouldUseAI = (ENABLE_GLOBAL_AI || (useAI && canUseAI()));
+
+    // 預設回覆邏輯更新：從陣列中隨機選一個
+    const presetReplies = PRESET_REPLIES[question]?.[selectedStyle.id];
+    const presetReply = Array.isArray(presetReplies)
+      ? presetReplies[Math.floor(Math.random() * presetReplies.length)]
+      : presetReplies;
 
     let finalReply = null;
 
-    if (shouldUseAI) {
-      // 使用 AI 生成
-      if (!isUnlocked) {
-        incrementAIUsage();
-        setAiUsage(getAIUsage());
-      }
-
-      // 呼叫後端 API
+    if (shouldUseAI && ENABLE_GLOBAL_AI) { // 目前暫時只在全網解鎖時使用 AI (或依據需求調整)
       finalReply = await generateAIReply(question, selectedStyle.id);
-
-      // 如果 AI 失敗，使用備用回覆
       if (!finalReply) {
         const fallbackReplies = {
           savage: ["關你屁事", "你很閒齁", "管好自己吧"],
@@ -366,21 +196,22 @@ export default function CNYGame() {
         const replies = fallbackReplies[selectedStyle.id] || fallbackReplies.savage;
         finalReply = replies[Math.floor(Math.random() * replies.length)];
       }
-    } else if (presetReply) {
-      // 使用預設回覆
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      finalReply = presetReply;
     } else {
-      // 沒有預設也沒有 AI，使用通用回覆
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const genericReplies = {
-        savage: ["你管太多了吧", "這關你什麼事", "有事嗎"],
-        sharp: ["那您呢", "您先回答好了", "這問題問你自己"],
-        funny: ["蛤？", "我聽不懂耶", "下一題"],
-        gentle: ["謝謝關心呢", "您真的很關心我", "我會加油的"]
-      };
-      const replies = genericReplies[selectedStyle.id];
-      finalReply = replies[Math.floor(Math.random() * replies.length)];
+      // 使用豐富的預設回覆
+      await new Promise(resolve => setTimeout(resolve, 800)); // 假裝思考一下
+      if (presetReply) {
+        finalReply = presetReply;
+      } else {
+        // 通用回覆 (沒對應到題目時)
+        const genericReplies = {
+          savage: ["你管太多了吧", "這關你什麼事", "有事嗎", "您還是多關心自己吧", "這問題太無聊"],
+          sharp: ["那您呢", "您先回答好了", "這問題問你自己", "您覺得呢？", "這很重要嗎？"],
+          funny: ["蛤？", "我聽不懂耶", "下一題", "訊號不好聽不清楚", "這題超綱了"],
+          gentle: ["謝謝關心呢", "您真的很關心我", "我會加油的", "讓您費心了", "目前還在努力中"]
+        };
+        const replies = genericReplies[selectedStyle.id];
+        finalReply = replies[Math.floor(Math.random() * replies.length)];
+      }
     }
 
     setGeneratedReply(finalReply);
@@ -402,11 +233,6 @@ export default function CNYGame() {
   };
 
   const reroll = async () => {
-    if (useAI && !canUseAI()) {
-      setShowDonateModal(true);
-      return;
-    }
-
     setCurrentView('generating');
     setIsLoading(true);
     const question = selectedQuestion?.question || customQuestion;
@@ -414,37 +240,77 @@ export default function CNYGame() {
 
     let newReply = null;
 
-    if (useAI && canUseAI()) {
-      if (!isUnlocked) {
-        incrementAIUsage();
-        setAiUsage(getAIUsage());
-      }
-
-      // 呼叫後端 API，帶入之前的回覆避免重複
+    if (ENABLE_GLOBAL_AI) {
       newReply = await generateAIReply(question, selectedStyle.id, generatedReply);
-
       if (!newReply) {
-        const altReplies = {
-          savage: ["你管太多了吧", "這關你什麼事", "你是我媽嗎"],
-          sharp: ["那您呢", "問這個是要幹嘛"],
-          funny: ["我選擇死亡", "下一題謝謝"],
-          gentle: ["您真的很關心我呢", "謝謝您的關心"]
-        };
-        const replies = altReplies[selectedStyle.id] || altReplies.savage;
-        newReply = replies[Math.floor(Math.random() * replies.length)];
+        const fallback = ["關你屁事", "你很閒齁"];
+        newReply = fallback[Math.floor(Math.random() * fallback.length)];
       }
     } else {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const allReplies = Object.values(PRESET_REPLIES)
-        .map(r => r[selectedStyle.id])
-        .filter(Boolean);
-      newReply = allReplies[Math.floor(Math.random() * allReplies.length)] || generatedReply;
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const presetReplies = PRESET_REPLIES[question]?.[selectedStyle.id];
+
+      if (Array.isArray(presetReplies)) {
+        newReply = presetReplies[Math.floor(Math.random() * presetReplies.length)];
+        if (newReply === generatedReply && presetReplies.length > 1) {
+          newReply = presetReplies[Math.floor(Math.random() * presetReplies.length)];
+        }
+      } else if (presetReplies) {
+        newReply = presetReplies;
+      } else {
+        const genericReplies = {
+          savage: ["你管太多了吧", "這關你什麼事", "有事嗎", "您還是多關心自己吧", "這問題太無聊"],
+          sharp: ["那您呢", "您先回答好了", "這問題問你自己", "您覺得呢？", "這很重要嗎？"],
+          funny: ["蛤？", "我聽不懂耶", "下一題", "訊號不好聽不清楚", "這題超綱了"],
+          gentle: ["謝謝關心呢", "您真的很關心我", "我會加油的", "讓您費心了", "目前還在努力中"]
+        };
+        const replies = genericReplies[selectedStyle.id];
+        newReply = replies[Math.floor(Math.random() * replies.length)];
+      }
     }
 
     setGeneratedReply(newReply);
     setLuckyPhrase(getMatchedLuckyPhrase(questionCategory));
     setIsLoading(false);
     setCurrentView('result');
+  };
+
+  const handleShare = async () => {
+    if (resultCardRef.current) {
+      try {
+        const canvas = await html2canvas(resultCardRef.current, {
+          backgroundColor: null,
+          scale: 2,
+          useCORS: true
+        });
+
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            const file = new File([blob], "cny-reply.png", { type: "image/png" });
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+              try {
+                await navigator.share({
+                  files: [file],
+                  title: '親戚回嘴產生器',
+                  text: '這是我用親戚回嘴產生器生成的神回覆，快來試試！'
+                });
+              } catch (err) {
+                console.error("Share failed", err);
+              }
+            } else {
+              const link = document.createElement('a');
+              link.href = canvas.toDataURL("image/png");
+              link.download = 'cny-reply.png';
+              link.click();
+              alert("已下載圖片！快分享給朋友吧！");
+            }
+          }
+        });
+      } catch (error) {
+        console.error("Screenshot failed", error);
+        alert("圖片生成失敗，請手動截圖試試！");
+      }
+    }
   };
 
   const Fireworks = () => (
@@ -647,18 +513,40 @@ export default function CNYGame() {
             </div>
           </div>
 
-          <div className="mb-6 p-3 bg-red-950/50 rounded-xl border border-red-700/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🤖</span>
-                <span className="text-red-200 text-sm">AI 回覆額度</span>
+          <div className="mb-6 p-4 bg-red-950/50 rounded-xl border border-red-700/50">
+            {ENABLE_GLOBAL_AI ? (
+              <div className="text-center">
+                <p className="text-green-400 font-bold mb-2">🎉 全網集氣成功！AI 功能已解鎖！</p>
+                <p className="text-red-200 text-sm">現在您可以無限使用 AI 生成神回覆！</p>
               </div>
-              {isUnlocked ? (
-                <span className="text-green-400 text-sm font-bold">♾️ 無限</span>
-              ) : (
-                <span className="text-yellow-400 text-sm font-bold">{getRemainingAICount()}/{AI_DAILY_LIMIT} 次</span>
-              )}
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-yellow-400 font-bold flex items-center gap-2">
+                    <span>☕</span> 全網募資解鎖 AI
+                  </p>
+                  <span className="text-red-200 text-sm">{CURRENT_DONATION} / {GOAL_DONATION} 杯</span>
+                </div>
+                <div className="w-full bg-red-900 rounded-full h-3 mb-3 relative overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-full rounded-full transition-all duration-1000 relative"
+                    style={{ width: `${Math.min((CURRENT_DONATION / GOAL_DONATION) * 100, 100)}%` }}
+                  >
+                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                  </div>
+                </div>
+                <p className="text-red-300 text-xs text-center mb-3">
+                  AI 伺服器成本高昂，目前功能暫時封印。<br />
+                  請我們喝杯咖啡，加速解鎖全網 AI 功能！
+                </p>
+                <button
+                  onClick={() => window.open('https://portaly.cc/zn.studio/support', '_blank')}
+                  className="w-full py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 rounded-lg hover:bg-yellow-500/30 transition-colors text-sm font-bold flex items-center justify-center gap-2"
+                >
+                  <span>🧧</span> 贊助 $30 加速解鎖
+                </button>
+              </>
+            )}
           </div>
 
           <button onClick={() => setCurrentView('select')}
@@ -736,23 +624,15 @@ export default function CNYGame() {
               <div>
                 <p className="text-red-100 font-bold">使用 AI 生成</p>
                 <p className="text-red-400 text-xs">
-                  {isUnlocked ? '已解鎖無限使用' : `今日剩餘 ${getRemainingAICount()} 次`}
+                  {ENABLE_GLOBAL_AI ? '已全網解鎖' : '需全網集氣解鎖'}
                 </p>
               </div>
             </div>
             <button
-              onClick={() => {
-                if (!useAI && !canUseAI()) {
-                  setShowDonateModal(true);
-                } else {
-                  setUseAI(!useAI);
-                }
-              }}
-              className={`w-14 h-8 rounded-full transition-all duration-300 ${useAI ? 'bg-green-500' : 'bg-red-700'
-                }`}
+              disabled={!ENABLE_GLOBAL_AI}
+              className={`w-14 h-8 rounded-full transition-all duration-300 ${ENABLE_GLOBAL_AI && useAI ? 'bg-green-500' : 'bg-gray-600'}`}
             >
-              <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-all duration-300 ${useAI ? 'translate-x-7' : 'translate-x-1'
-                }`} />
+              <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-all duration-300 ${ENABLE_GLOBAL_AI && useAI ? 'translate-x-7' : 'translate-x-1'}`} />
             </button>
           </div>
           {useAI && !isUnlocked && (
@@ -802,7 +682,7 @@ export default function CNYGame() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 relative">
       {showFireworks && <Fireworks />}
       <div className="max-w-md w-full">
-        <div className="bg-gradient-to-br from-red-800 via-red-900 to-red-950 rounded-3xl p-6 shadow-2xl border-4 border-yellow-500/50 relative overflow-hidden">
+        <div ref={resultCardRef} className="bg-gradient-to-br from-red-800 via-red-900 to-red-950 rounded-3xl p-6 shadow-2xl border-4 border-yellow-500/50 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-16 h-16"><div className="absolute top-2 left-2 text-2xl">🔥</div></div>
           <div className="absolute top-0 right-0 w-16 h-16"><div className="absolute top-2 right-2 text-2xl">🔥</div></div>
 
@@ -835,22 +715,26 @@ export default function CNYGame() {
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
-          <button onClick={restart}
-            className="flex-1 py-3 px-4 bg-red-800/80 text-red-100 font-bold rounded-xl border border-red-700 hover:bg-red-700/80 transition-colors text-sm">
-            🔄 換題目
-          </button>
-          <button onClick={reroll}
-            className="flex-1 py-3 px-4 bg-red-800/80 text-red-100 font-bold rounded-xl border border-red-700 hover:bg-red-700/80 transition-colors text-sm">
-            🎲 再嗆一次
-          </button>
-          <button onClick={() => {
-            const text = `親戚問：「${selectedQuestion?.question || customQuestion}」\n\n${selectedStyle?.emoji} ${selectedStyle?.name}回覆：\n「${generatedReply}」\n\n${luckyPhrase}\n\n#過年神回覆 #親戚回嘴產生器\n\n🔗 by ${CREATOR_INFO.studio}\n${CREATOR_INFO.website}`;
-            navigator.clipboard.writeText(text);
-            alert('已複製！快去分享吧 🔥');
-          }}
-            className="flex-1 py-3 px-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-red-900 font-bold rounded-xl hover:shadow-yellow-500/50 hover:shadow-lg transition-all text-sm">
-            📋 複製
+        <div className="flex flex-col gap-3 mt-6">
+          <div className="flex gap-3">
+            <button onClick={restart}
+              className="flex-1 py-3 px-4 bg-red-800/80 text-red-100 font-bold rounded-xl border border-red-700 hover:bg-red-700/80 transition-colors text-sm">
+              🔄 換題目
+            </button>
+            <button onClick={reroll}
+              className="flex-1 py-3 px-4 bg-red-800/80 text-red-100 font-bold rounded-xl border border-red-700 hover:bg-red-700/80 transition-colors text-sm">
+              🎲 再嗆一次
+            </button>
+            <button onClick={handleShare}
+              className="flex-1 py-3 px-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-red-900 font-bold rounded-xl hover:shadow-yellow-500/50 hover:shadow-lg transition-all text-sm flex items-center justify-center gap-1">
+              <span>📸</span> 分享
+            </button>
+          </div>
+          <button
+            onClick={() => window.open('https://portaly.cc/zn.studio/support', '_blank')}
+            className="w-full py-3 bg-red-900/50 border border-yellow-500/30 text-yellow-400 rounded-xl hover:bg-red-900/80 transition-colors text-sm font-bold flex items-center justify-center gap-2"
+          >
+            <span>🧧</span> 過年求生不易，賞個紅包支持開發者！
           </button>
         </div>
 
