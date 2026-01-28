@@ -212,6 +212,7 @@ export default function CNYGame() {
 
     // 預設回覆邏輯更新：從陣列中隨機選一個
     const presetReplies = PRESET_REPLIES[question]?.[selectedStyle.id];
+
     const presetReply = Array.isArray(presetReplies)
       ? presetReplies[Math.floor(Math.random() * presetReplies.length)]
       : presetReplies;
@@ -739,10 +740,11 @@ export default function CNYGame() {
             </div>
             <button
               onClick={() => {
-                // 如果額度用完且未解鎖，點擊時彈出 Donate Modal
-                if (!canUseAI()) {
+                // 如果是想要開啟 AI，且額度用完未解鎖，才彈出視窗
+                if (!useAI && !canUseAI()) {
                   setShowDonateModal(true);
                 } else {
+                  // 其他情況（關閉 AI，或是還有額度）都可以切換
                   setUseAI(!useAI);
                 }
               }}
