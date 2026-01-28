@@ -69,7 +69,7 @@ const getMatchedLuckyPhrase = (questionCategory) => {
 const CURRENT_DONATION = 0; // 手動更新此數字 (單位: 杯咖啡)
 
 const DONATION_TIERS = [
-  { threshold: 0, limit: 3, name: "體驗版" },
+  { threshold: 0, limit: 3, name: "體驗版 Level 0" },
   { threshold: 10, limit: 5, name: "集氣 Level 1" },
   { threshold: 30, limit: 10, name: "集氣 Level 2" },
   { threshold: 50, limit: Infinity, name: "全網解鎖" },
@@ -515,14 +515,14 @@ export default function CNYGame() {
           >
             <span>☕</span>
             <span>請我喝杯咖啡 ($60)</span>
-          </button>
+          </button >
           <button
             onClick={() => setShowDonateModal(false)}
             className="w-full py-3 bg-red-800/50 text-red-300 font-medium rounded-xl hover:bg-red-800 transition-colors"
           >
             先用免費的
           </button>
-        </div>
+        </div >
 
         <div className="mt-6 pt-6 border-t border-red-800/50">
           <p className="text-red-300 text-sm mb-2 font-bold">已有兌換碼？</p>
@@ -549,8 +549,8 @@ export default function CNYGame() {
         <p className="text-center text-red-500/60 text-xs mt-4">
           支持 {CREATOR_INFO.studio}，讓更多神器誕生 🙏
         </p>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 
   // Footer 元件

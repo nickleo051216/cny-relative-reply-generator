@@ -198,14 +198,14 @@ const LUCKY_PHRASES = {
     "熬夜也不會爆肝！🌙",
     "腰不酸、腿不痛！🦵",
   ],
-  snake2025: [
-    "蛇來運轉，好運連連！🐍",
-    "金蛇獻瑞，吉祥如意！🐍✨",
-    "靈蛇報喜，福氣滿滿！🐍🧧",
-    "蛇年大吉，心想事成！🐍💫",
-    "蛇舞新春，萬事亨通！🐍🎊",
-    "銀蛇送福，財運亨通！🐍💰",
-  ],
+  horse2026: [
+    "馬到成功，好運連連！🐎",
+    "金馬獻瑞，吉祥如意！🐎✨",
+    "龍馬精神，福氣滿滿！🐎🧧",
+    "馬年大吉，心想事成！🐎💫",
+    "馬躍新春，萬事亨通！🐎🎊",
+    "天馬送福，財運亨通！🐎💰"
+],
 };
 
 const getRandomLuckyPhrase = () => {
@@ -568,7 +568,7 @@ ${selectedStyle.id === 'gentle' ? '- 笑裡藏刀，表面溫和但暗藏殺機'
             className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-red-900 font-bold rounded-xl hover:shadow-lg hover:shadow-yellow-500/30 transition-all flex items-center justify-center gap-2"
           >
             <span>☕</span>
-            <span>請我喝杯咖啡 ($30)</span>
+            <span>請我喝杯咖啡 $$ </span>
           </button>
           <button
             onClick={() => setShowDonateModal(false)}
