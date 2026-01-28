@@ -15,6 +15,9 @@ const CREATOR_INFO = {
   phone: "0932-684-051",
 };
 
+// 兌換碼設定
+const VALID_REDEEM_CODES = ["CNY2026", "VIP888", "ZNSTUDIO", "RICH2026"];
+
 // 預設親戚問題
 
 
@@ -162,6 +165,7 @@ export default function CNYGame() {
   const [showDonateModal, setShowDonateModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [useAI, setUseAI] = useState(false);
+  const [redeemCode, setRedeemCode] = useState('');
   const resultCardRef = useRef(null);
 
   useEffect(() => {
@@ -181,12 +185,20 @@ export default function CNYGame() {
   };
 
   const handleDonate = () => {
-    // TODO: 串接實際金流（綠界 / LINE Pay）
-    // window.open('你的金流連結', '_blank');
-    unlockAI();
-    setIsUnlocked(true);
-    setShowDonateModal(false);
-    alert('🎉 感謝支持！AI 回覆已永久解鎖！');
+    // 開啟贊助頁面，但不直接解鎖
+    window.open('https://portaly.cc/zn.studio/support', '_blank');
+  };
+
+  const handleRedeem = () => {
+    if (VALID_REDEEM_CODES.includes(redeemCode.toUpperCase().trim())) {
+      unlockAI();
+      setIsUnlocked(true);
+      setShowDonateModal(false);
+      setRedeemCode('');
+      alert('🎉 兌換成功！AI 回覆已永久解鎖！感謝您的支持！');
+    } else {
+      alert('❌ 兌換碼錯誤，請檢查後再試一次。\n(贊助後請查看感謝頁面或 Email 獲取兌換碼)');
+    }
   };
 
   const generateReply = async () => {
@@ -510,6 +522,28 @@ export default function CNYGame() {
           >
             先用免費的
           </button>
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-red-800/50">
+          <p className="text-red-300 text-sm mb-2 font-bold">已有兌換碼？</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={redeemCode}
+              onChange={(e) => setRedeemCode(e.target.value)}
+              placeholder="輸入兌換碼解鎖..."
+              className="flex-1 bg-red-950 border border-red-700 rounded-lg px-3 py-2 text-yellow-400 placeholder-red-700/50 focus:outline-none focus:border-yellow-500"
+            />
+            <button
+              onClick={handleRedeem}
+              className="bg-red-800 text-red-200 px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-bold whitespace-nowrap"
+            >
+              兌換
+            </button>
+          </div>
+          <p className="text-xs text-red-500/60 mt-2 text-left">
+            * 贊助後，兌換碼將顯示於感謝頁面
+          </p>
         </div>
 
         <p className="text-center text-red-500/60 text-xs mt-4">
