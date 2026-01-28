@@ -287,7 +287,10 @@ export default function CNYGame() {
         canvas.toBlob(async (blob) => {
           if (blob) {
             const file = new File([blob], "cny-reply.png", { type: "image/png" });
-            if (navigator.share && navigator.canShare({ files: [file] })) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            // 只有在手機上且支援分享時才呼叫原生分享
+            if (isMobile && navigator.share && navigator.canShare({ files: [file] })) {
               try {
                 await navigator.share({
                   files: [file],
@@ -296,8 +299,14 @@ export default function CNYGame() {
                 });
               } catch (err) {
                 console.error("Share failed", err);
+                // 分享失敗（或取消）時，回退到下載
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL("image/png");
+                link.download = 'cny-reply.png';
+                link.click();
               }
             } else {
+              // 電腦版或不支援分享時，直接下載
               const link = document.createElement('a');
               link.href = canvas.toDataURL("image/png");
               link.download = 'cny-reply.png';
