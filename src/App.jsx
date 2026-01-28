@@ -171,8 +171,8 @@ export default function CNYGame() {
   useEffect(() => {
     setAiUsage(getAIUsage());
     setIsUnlocked(isAIUnlocked());
-    // 預設開啟 AI，但會受到次數限制
-    setUseAI(true);
+    // 預設關閉 AI (Free Mode)，讓使用者自己決定何時開啟
+    setUseAI(false);
   }, []);
 
   const currentTier = getCurrentTier();
@@ -229,9 +229,16 @@ export default function CNYGame() {
     } else if (shouldUseAI) {
       // 有額度，使用 AI 生成生成
       // 若尚未全網解鎖且未個人解鎖，則扣除額度
+      // 若尚未全網解鎖且未個人解鎖，則扣除額度
       if (!isUnlocked && currentTier.limit !== Infinity) {
-        incrementAIUsage();
-        setAiUsage(getAIUsage());
+        const newCount = incrementAIUsage();
+        const updatedUsage = { date: new Date().toDateString(), count: newCount };
+        setAiUsage(updatedUsage);
+
+        // 如果用完這次額度後變成 0 (或更少，保險起見)，自動切換回預設模式
+        if (currentTier.limit - newCount <= 0) {
+          setUseAI(false);
+        }
       }
 
       finalReply = await generateAIReply(question, selectedStyle.id);
