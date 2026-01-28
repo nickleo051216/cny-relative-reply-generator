@@ -543,7 +543,7 @@ export default function CNYGame() {
                   onClick={() => window.open('https://portaly.cc/zn.studio/support', '_blank')}
                   className="w-full py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 rounded-lg hover:bg-yellow-500/30 transition-colors text-sm font-bold flex items-center justify-center gap-2"
                 >
-                  <span>🧧</span> 贊助 $30 加速解鎖
+                  <span>🧧</span> 贊助 一杯咖啡 加速解鎖
                 </button>
               </>
             )}
