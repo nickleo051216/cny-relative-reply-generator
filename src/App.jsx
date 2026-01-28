@@ -66,7 +66,7 @@ const getMatchedLuckyPhrase = (questionCategory) => {
 const CURRENT_DONATION = 0; // 手動更新此數字 (單位: 杯咖啡)
 
 const DONATION_TIERS = [
-  { threshold: 0, limit: 3, name: "體驗版" },
+  { threshold: 0, limit: 3, name: "體驗版 Level 0" },
   { threshold: 10, limit: 5, name: "集氣 Level 1" },
   { threshold: 30, limit: 10, name: "集氣 Level 2" },
   { threshold: 50, limit: Infinity, name: "全網解鎖" },
@@ -502,7 +502,7 @@ export default function CNYGame() {
             className="w-full py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-red-900 font-bold rounded-xl hover:shadow-lg hover:shadow-yellow-500/30 transition-all flex items-center justify-center gap-2"
           >
             <span>☕</span>
-            <span>請我喝杯咖啡 ($30)</span>
+            <span>請我喝杯咖啡 $$ </span>
           </button>
           <button
             onClick={() => setShowDonateModal(false)}
@@ -615,7 +615,7 @@ export default function CNYGame() {
                   onClick={() => window.open('https://portaly.cc/zn.studio/support', '_blank')}
                   className="w-full py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 rounded-lg hover:bg-yellow-500/30 transition-colors text-sm font-bold flex items-center justify-center gap-2"
                 >
-                  <span>🧧</span> 贊助 $30 幫大家升級
+                  <span>🧧</span> 贊助 咖啡$$ 幫大家升級
                 </button>
               </>
             )}
