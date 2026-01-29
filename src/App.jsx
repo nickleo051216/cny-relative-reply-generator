@@ -763,7 +763,8 @@ export default function CNYGame() {
           <div className="mt-4">
             <p className="text-red-300 text-sm mb-2">親戚問了其他的？自己輸入：</p>
             <input type="text" value={customQuestion}
-              onChange={(e) => { setCustomQuestion(e.target.value); setSelectedQuestion(null); }}
+              onChange={(e) => setCustomQuestion(e.target.value)}
+              onFocus={() => setSelectedQuestion(null)}
               placeholder="輸入那個白目親戚的問題..."
               className="w-full p-4 rounded-xl bg-red-900/50 border-2 border-red-700/50 text-red-100 placeholder-red-400/50 focus:outline-none focus:border-yellow-500 transition-colors" />
           </div>
