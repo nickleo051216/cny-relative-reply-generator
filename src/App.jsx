@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { RELATIVE_QUESTIONS, PRESET_REPLIES, LUCKY_PHRASES } from './data/replies';
+import { OPPONENTS } from './data/opponents';
 
 // 創作者資訊
 const CREATOR_INFO = {
@@ -125,7 +126,7 @@ const unlockAI = () => {
 };
 
 // ============ AI API 呼叫函數 ============
-const generateAIReply = async (question, styleId, previousReply = null) => {
+const generateAIReply = async (question, styleId, opponent, previousReply = null) => {
   try {
     const response = await fetch('/api/generate', {
       method: 'POST',
@@ -135,6 +136,7 @@ const generateAIReply = async (question, styleId, previousReply = null) => {
       body: JSON.stringify({
         question,
         style: styleId,
+        opponent, // 新增對手資訊
         previousReply,
       }),
     });
@@ -153,6 +155,8 @@ const generateAIReply = async (question, styleId, previousReply = null) => {
 
 export default function CNYGame() {
   const [currentView, setCurrentView] = useState('home');
+  const [selectedOpponent, setSelectedOpponent] = useState(null);
+  const [customOpponent, setCustomOpponent] = useState({ name: '', desc: '' });
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [customQuestion, setCustomQuestion] = useState('');
   const [selectedStyle, setSelectedStyle] = useState(null);
@@ -207,6 +211,11 @@ export default function CNYGame() {
 
     const question = selectedQuestion?.question || customQuestion;
     const questionCategory = selectedQuestion?.category || "人生";
+    // 準備對手資訊
+    const opponentData = selectedOpponent?.id === 'custom' 
+      ? { ...customOpponent, id: 'custom', weakness: '未知' }
+      : selectedOpponent;
+
     // 只要有額度或是已解鎖就可以使用 AI
     const shouldUseAI = useAI;
 
@@ -241,7 +250,7 @@ export default function CNYGame() {
         }
       }
 
-      finalReply = await generateAIReply(question, selectedStyle.id);
+      finalReply = await generateAIReply(question, selectedStyle.id, opponentData);
       if (!finalReply) {
         const fallbackReplies = {
           savage: ["關你屁事", "你很閒齁", "管好自己吧"],
@@ -279,6 +288,8 @@ export default function CNYGame() {
   };
 
   const restart = () => {
+    setSelectedOpponent(null);
+    setCustomOpponent({ name: '', desc: '' });
     setSelectedQuestion(null);
     setCustomQuestion('');
     setSelectedStyle(null);
@@ -298,6 +309,10 @@ export default function CNYGame() {
     setIsLoading(true);
     const question = selectedQuestion?.question || customQuestion;
     const questionCategory = selectedQuestion?.category || "人生";
+    // 準備對手資訊
+    const opponentData = selectedOpponent?.id === 'custom' 
+      ? { ...customOpponent, id: 'custom', weakness: '未知' }
+      : selectedOpponent;
 
     let newReply = null;
 
@@ -308,7 +323,7 @@ export default function CNYGame() {
         setAiUsage(getAIUsage());
       }
 
-      newReply = await generateAIReply(question, selectedStyle.id, generatedReply);
+      newReply = await generateAIReply(question, selectedStyle.id, opponentData, generatedReply);
       if (!newReply) {
         const fallback = ["關你屁事", "你很閒齁"];
         newReply = fallback[Math.floor(Math.random() * fallback.length)];
@@ -685,9 +700,52 @@ export default function CNYGame() {
           ← 返回首頁
         </button>
 
+        {/* 步驟 1: 選擇對手 */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
             <span className="w-8 h-8 bg-yellow-500 text-red-900 rounded-full flex items-center justify-center text-sm font-black">1</span>
+            你的對手是誰？
+          </h2>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {OPPONENTS.map((op) => (
+              <button key={op.id} onClick={() => { setSelectedOpponent(op); setCustomOpponent({ name: '', desc: '' }); }}
+                className={`p-4 rounded-xl text-left transition-all duration-300 border-2 ${selectedOpponent?.id === op.id
+                  ? 'bg-yellow-500/20 border-yellow-500 shadow-lg shadow-yellow-500/20'
+                  : 'bg-red-900/50 border-red-700/50 hover:border-yellow-500/50 hover:bg-red-800/50'
+                  }`}>
+                <span className="text-3xl block mb-2">{op.emoji}</span>
+                <span className="text-red-100 font-bold block">{op.name}</span>
+                <span className="text-red-400 text-xs block mt-1">{op.desc.substring(0, 20)}...</span>
+              </button>
+            ))}
+            <button onClick={() => setSelectedOpponent({ id: 'custom' })}
+              className={`p-4 rounded-xl text-center transition-all duration-300 border-2 flex flex-col items-center justify-center ${selectedOpponent?.id === 'custom'
+                ? 'bg-yellow-500/20 border-yellow-500 shadow-lg shadow-yellow-500/20'
+                : 'bg-red-900/50 border-red-700/50 hover:border-yellow-500/50 hover:bg-red-800/50'
+                }`}>
+              <span className="text-3xl block mb-2">✏️</span>
+              <span className="text-red-100 font-bold block">自訂對手</span>
+            </button>
+          </div>
+          
+          {selectedOpponent?.id === 'custom' && (
+            <div className="space-y-3 p-4 bg-red-900/30 rounded-xl border border-red-700/50 animate-fade-in">
+              <input type="text" value={customOpponent.name}
+                onChange={(e) => setCustomOpponent({ ...customOpponent, name: e.target.value })}
+                placeholder="對手名稱 (例：前男友)"
+                className="w-full p-3 rounded-lg bg-red-950 border border-red-700 text-red-100 focus:border-yellow-500 outline-none" />
+              <input type="text" value={customOpponent.desc}
+                onChange={(e) => setCustomOpponent({ ...customOpponent, desc: e.target.value })}
+                placeholder="特徵描述 (例：很愛炫耀新車)"
+                className="w-full p-3 rounded-lg bg-red-950 border border-red-700 text-red-100 focus:border-yellow-500 outline-none" />
+            </div>
+          )}
+        </div>
+
+        {/* 步驟 2: 選擇問題 */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
+            <span className="w-8 h-8 bg-yellow-500 text-red-900 rounded-full flex items-center justify-center text-sm font-black">2</span>
             親戚又在問什麼？
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -711,9 +769,10 @@ export default function CNYGame() {
           </div>
         </div>
 
+        {/* 步驟 3: 選擇風格 */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
-            <span className="w-8 h-8 bg-yellow-500 text-red-900 rounded-full flex items-center justify-center text-sm font-black">2</span>
+            <span className="w-8 h-8 bg-yellow-500 text-red-900 rounded-full flex items-center justify-center text-sm font-black">3</span>
             要多嗆？
           </h2>
           <div className="grid grid-cols-2 gap-3">
@@ -747,11 +806,9 @@ export default function CNYGame() {
             </div>
             <button
               onClick={() => {
-                // 如果是想要開啟 AI，且額度用完未解鎖，才彈出視窗
                 if (!useAI && !canUseAI()) {
                   setShowDonateModal(true);
                 } else {
-                  // 其他情況（關閉 AI，或是還有額度）都可以切換
                   setUseAI(!useAI);
                 }
               }}
@@ -772,8 +829,17 @@ export default function CNYGame() {
         </div>
 
         <button onClick={generateReply}
-          disabled={(!selectedQuestion && !customQuestion) || !selectedStyle}
-          className={`w-full py-4 px-8 font-bold text-xl rounded-2xl shadow-lg transform transition-all duration-300 ${(selectedQuestion || customQuestion) && selectedStyle
+          disabled={
+            !selectedOpponent || 
+            (selectedOpponent.id === 'custom' && !customOpponent.name) ||
+            (!selectedQuestion && !customQuestion) || 
+            !selectedStyle
+          }
+          className={`w-full py-4 px-8 font-bold text-xl rounded-2xl shadow-lg transform transition-all duration-300 ${
+            selectedOpponent && 
+            (selectedOpponent.id !== 'custom' || customOpponent.name) &&
+            (selectedQuestion || customQuestion) && 
+            selectedStyle
             ? 'bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-red-900 hover:shadow-yellow-500/50 hover:scale-105 active:scale-95'
             : 'bg-gray-600 text-gray-400 cursor-not-allowed'
             }`}>
@@ -805,78 +871,87 @@ export default function CNYGame() {
     </div>
   );
 
-  const ResultPage = () => (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 relative">
-      {showFireworks && <Fireworks />}
-      <div className="max-w-md w-full">
-        <div ref={resultCardRef} className="bg-gradient-to-br from-red-800 via-red-900 to-red-950 rounded-3xl p-6 shadow-2xl border-4 border-yellow-500/50 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-16 h-16"><div className="absolute top-2 left-2 text-2xl">🔥</div></div>
-          <div className="absolute top-0 right-0 w-16 h-16"><div className="absolute top-2 right-2 text-2xl">🔥</div></div>
+  const ResultPage = () => {
+    // 獲取當前對手資訊用於顯示
+    const displayOpponent = selectedOpponent?.id === 'custom' 
+      ? { ...customOpponent, emoji: '✏️' }
+      : selectedOpponent;
 
-          <div className="text-center mb-6 pt-4">
-            <span className="text-sm text-yellow-500/80 tracking-widest">
-              {useAI ? '🤖 AI 神回覆 🤖' : '💥 過年神回覆 💥'}
-            </span>
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 relative">
+        {showFireworks && <Fireworks />}
+        <div className="max-w-md w-full">
+          <div ref={resultCardRef} className="bg-gradient-to-br from-red-800 via-red-900 to-red-950 rounded-3xl p-6 shadow-2xl border-4 border-yellow-500/50 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-16 h-16"><div className="absolute top-2 left-2 text-2xl">🔥</div></div>
+            <div className="absolute top-0 right-0 w-16 h-16"><div className="absolute top-2 right-2 text-2xl">🔥</div></div>
+
+            <div className="text-center mb-6 pt-4">
+              <span className="text-sm text-yellow-500/80 tracking-widest">
+                {useAI ? '🤖 AI 神回覆 🤖' : '💥 過年神回覆 💥'}
+              </span>
+            </div>
+
+            <div className="bg-red-950/50 rounded-2xl p-4 mb-4 border border-red-700/50">
+              <p className="text-red-400 text-sm mb-1">
+                {displayOpponent ? `${displayOpponent.emoji} ${displayOpponent.name}` : '👵 親戚'} 問：
+              </p>
+              <p className="text-red-100 text-lg font-medium">「{selectedQuestion?.question || customQuestion}」</p>
+            </div>
+
+            <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-2xl p-4 mb-4 border-2 border-yellow-500/30">
+              <p className="text-yellow-400 text-sm mb-1 flex items-center gap-1">
+                <span>{selectedStyle?.emoji}</span><span>{selectedStyle?.name}：</span>
+              </p>
+              <p className="text-yellow-100 text-xl font-bold leading-relaxed">「{generatedReply}」</p>
+            </div>
+
+            <div className="text-center py-3 border-t border-red-700/50">
+              <p className="text-red-300 text-sm mb-1">嗆完還是要祝福一下 🧧</p>
+              <p className="text-yellow-400 font-bold text-lg">{luckyPhrase}</p>
+            </div>
+
+            <div className="text-center mt-4 pt-4 border-t border-red-700/30">
+              <p className="text-red-500/60 text-xs">親戚回嘴產生器 by {CREATOR_INFO.studio}</p>
+              <p className="text-red-600/40 text-xs mt-1">Threads {CREATOR_INFO.threads}</p>
+            </div>
           </div>
 
-          <div className="bg-red-950/50 rounded-2xl p-4 mb-4 border border-red-700/50">
-            <p className="text-red-400 text-sm mb-1">👵 親戚問：</p>
-            <p className="text-red-100 text-lg font-medium">「{selectedQuestion?.question || customQuestion}」</p>
+          <div className="flex flex-col gap-3 mt-6">
+            <div className="flex gap-3">
+              <button onClick={restart}
+                className="flex-1 py-3 px-4 bg-red-800/80 text-red-100 font-bold rounded-xl border border-red-700 hover:bg-red-700/80 transition-colors text-sm">
+                🔄 換題目
+              </button>
+              <button onClick={reroll}
+                className="flex-1 py-3 px-4 bg-red-800/80 text-red-100 font-bold rounded-xl border border-red-700 hover:bg-red-700/80 transition-colors text-sm">
+                🎲 再嗆一次
+              </button>
+              <button onClick={handleShare}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-red-900 font-bold rounded-xl hover:shadow-yellow-500/50 hover:shadow-lg transition-all text-sm flex items-center justify-center gap-1">
+                <span>📸</span> 分享
+              </button>
+            </div>
+            <button
+              onClick={() => window.open('https://portaly.cc/zn.studio/support', '_blank')}
+              className="w-full py-3 bg-red-900/50 border border-yellow-500/30 text-yellow-400 rounded-xl hover:bg-red-900/80 transition-colors text-sm font-bold flex items-center justify-center gap-2"
+            >
+              <span>🧧</span> 過年求生不易，賞個紅包支持開發者！
+            </button>
           </div>
 
-          <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-2xl p-4 mb-4 border-2 border-yellow-500/30">
-            <p className="text-yellow-400 text-sm mb-1 flex items-center gap-1">
-              <span>{selectedStyle?.emoji}</span><span>{selectedStyle?.name}：</span>
+          {useAI && dailyLimit !== Infinity && !isUnlocked && (
+            <p className="text-center text-yellow-400/60 text-xs mt-3">
+              🤖 {currentTier.name}：AI 剩餘 {getRemainingAICount()} 次 · <button onClick={() => setShowDonateModal(true)} className="underline">個人解鎖無限</button>
             </p>
-            <p className="text-yellow-100 text-xl font-bold leading-relaxed">「{generatedReply}」</p>
-          </div>
+          )}
 
-          <div className="text-center py-3 border-t border-red-700/50">
-            <p className="text-red-300 text-sm mb-1">嗆完還是要祝福一下 🧧</p>
-            <p className="text-yellow-400 font-bold text-lg">{luckyPhrase}</p>
-          </div>
+          <p className="text-center text-red-400/60 text-sm mt-4">💡 截圖分享到 Threads / LINE 讓朋友也學起來！</p>
 
-          <div className="text-center mt-4 pt-4 border-t border-red-700/30">
-            <p className="text-red-500/60 text-xs">親戚回嘴產生器 by {CREATOR_INFO.studio}</p>
-            <p className="text-red-600/40 text-xs mt-1">Threads {CREATOR_INFO.threads}</p>
-          </div>
+          <Footer showAbout={true} />
         </div>
-
-        <div className="flex flex-col gap-3 mt-6">
-          <div className="flex gap-3">
-            <button onClick={restart}
-              className="flex-1 py-3 px-4 bg-red-800/80 text-red-100 font-bold rounded-xl border border-red-700 hover:bg-red-700/80 transition-colors text-sm">
-              🔄 換題目
-            </button>
-            <button onClick={reroll}
-              className="flex-1 py-3 px-4 bg-red-800/80 text-red-100 font-bold rounded-xl border border-red-700 hover:bg-red-700/80 transition-colors text-sm">
-              🎲 再嗆一次
-            </button>
-            <button onClick={handleShare}
-              className="flex-1 py-3 px-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-red-900 font-bold rounded-xl hover:shadow-yellow-500/50 hover:shadow-lg transition-all text-sm flex items-center justify-center gap-1">
-              <span>📸</span> 分享
-            </button>
-          </div>
-          <button
-            onClick={() => window.open('https://portaly.cc/zn.studio/support', '_blank')}
-            className="w-full py-3 bg-red-900/50 border border-yellow-500/30 text-yellow-400 rounded-xl hover:bg-red-900/80 transition-colors text-sm font-bold flex items-center justify-center gap-2"
-          >
-            <span>🧧</span> 過年求生不易，賞個紅包支持開發者！
-          </button>
-        </div>
-
-        {useAI && dailyLimit !== Infinity && !isUnlocked && (
-          <p className="text-center text-yellow-400/60 text-xs mt-3">
-            🤖 {currentTier.name}：AI 剩餘 {getRemainingAICount()} 次 · <button onClick={() => setShowDonateModal(true)} className="underline">個人解鎖無限</button>
-          </p>
-        )}
-
-        <p className="text-center text-red-400/60 text-sm mt-4">💡 截圖分享到 Threads / LINE 讓朋友也學起來！</p>
-
-        <Footer showAbout={true} />
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-800 via-red-900 to-red-950 text-white"

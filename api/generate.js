@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { question, style, previousReply } = req.body;
+  const { question, style, previousReply, opponent } = req.body;
 
   if (!question || !style) {
     return res.status(400).json({ error: 'Missing question or style' });
@@ -42,7 +42,19 @@ export default async function handler(req, res) {
     gentle: '溫柔刀'
   };
 
-  let prompt = `你是一個過年回嘴產生器。親戚問了這個問題：「${question}」
+  let opponentInfo = '';
+  if (opponent) {
+    opponentInfo = `
+對手身分：${opponent.name}
+對手特徵：${opponent.desc || ''}
+對手弱點：${opponent.weakness || ''}
+請針對這個人的弱點進行回擊，最好能帶入對方的人設情境！`;
+  }
+
+  let prompt = `你是一個過年回嘴產生器。
+${opponentInfo}
+
+親戚問了這個問題：「${question}」
 
 請用「${styleNames[style]}」的風格回覆。
 
@@ -50,7 +62,7 @@ export default async function handler(req, res) {
 ${stylePrompts[style]}
 
 要求：
-- 回覆要簡短有力（25字以內）
+- 回覆要簡短有力（30字以內）
 - 要像台灣人真的會說的話
 - 要夠嗆、夠直接
 - 不要有引號
